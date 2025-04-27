@@ -1,19 +1,39 @@
 [package]
 name = "zero2prod"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 
 [lib]
-path= "src/lib.rs"
+path = "src/lib.rs"
 
 [[bin]]
 path = "src/main.rs"
 name = "zero2prod"
 
 [dev-dependencies]
-reqwest = "0.11"
+reqwest = "0.11.14"
+sqlx = { version = "0.7", features = ["postgres", "runtime-tokio-native-tls"] } # For tests
 
 [dependencies]
 actix-web = "4.10.2"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
-serde = { version = "1", features = ["derive"]}
+serde = { version = "1", features = ["derive"] }
+
+# Primary SQLx configuration
+[dependencies.sqlx]
+version = "0.7"
+default-features = false
+features = [
+    "postgres", # Matches actix-web runtime
+    "macros",
+    "migrate",
+    "chrono",
+    "uuid",
+    "json", # Enables compile-time query checking
+]
+
+# Recommended companion dependencies
+# [dependencies]
+# dotenv = "0.15" # For .env file support
+# chrono = { version = "0.4", features = ["serde"] } # DateTime support
+# uuid = { version = "1.4", features = ["v4", "serde"] } # For UUID primary keys
