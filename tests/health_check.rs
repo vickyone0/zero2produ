@@ -45,7 +45,7 @@ pub async fn configure_database(config: &DatabaseSettings) -> PgPool {
     .await
     .expect("Failed to create database.");
     // Migrate database
-    let connection_pool = PgPool::connect(&config.with_db())
+    let connection_pool = PgPool::connect(&config.with_db().to_string())
     .await
     .expect("Failed to connect to Postgres.");
     sqlx::migrate!("./migrations")
@@ -127,3 +127,32 @@ async fn subscribe_returns_a_400_for_invalid_data() {
         assert_eq!(400, response.status().as_u16(), "{}", error_message);
     }
 }
+
+#[tokio::test]
+async fn subscribe_returns_a_200_when_fields_are_present_but_empty() {
+    // Arrange
+    let app = spawn_app().await;
+    let client = reqwest::Client::new();
+    let test_cases = vec![
+    ("name=&email=ursula_le_guin%40gmail.com", "empty name"),
+    ("name=Ursula&email=", "empty email"),
+    ("name=Ursula&email=definitely-not-an-email", "invalid email"),
+    ];
+    for (body, description) in test_cases {
+    // Act
+    let response = client
+    .post(&format!("{}/subscriptions", &app.address))
+    .header("Content-Type", "application/x-www-form-urlencoded")
+    .body(body)
+    .send()
+    .await
+    .expect("Failed to execute request.");
+    // Assert
+    assert_eq!(
+    200,
+    response.status().as_u16(),
+    "The API did not return a 200 OK when the payload was {}.",
+    description
+    );
+    }
+    }

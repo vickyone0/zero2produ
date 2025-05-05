@@ -40,6 +40,14 @@ COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
 FROM chef as builder
 COPY --from=planner /app/recipe.json recipe.json
+
+
+# Install OpenSSL build dependencies
+RUN apt update && \
+    apt install -y pkg-config libssl-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+    
 # Build our project dependencies, not our application!
 RUN cargo chef cook --release --recipe-path recipe.json
 # Up to this point, if our dependency tree stays the same,
