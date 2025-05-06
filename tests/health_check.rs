@@ -25,7 +25,7 @@ async fn spawn_app() -> TestApp {
 
     let mut configuration = get_configuration().expect("Failed to read configuration.");
     configuration.database.database_name = Uuid::new_v4().to_string();
-let connection_pool = PgPool::connect(&configuration.database.connection_string()).await.expect("Failed to connect to Postgres.");
+let connection_pool = PgPool::connect(&configuration.database.with_db()).await.expect("Failed to connect to Postgres.");
 let server = run(listener, connection_pool.clone())
 .expect("Failed to bind address");
 let _ = tokio::spawn(server);
@@ -104,7 +104,7 @@ async fn subscribe_returns_a_200_for_valid_data() {
 }
 
 #[tokio::test]
-async fn subscribe_returns_a_400_for_invalid_data() {
+async fn subscribe_returns_a_400_when_fields_are_present_but_invalid() {
     // Arrange
     let app = spawn_app().await;
     let client = reqwest::Client::new();
