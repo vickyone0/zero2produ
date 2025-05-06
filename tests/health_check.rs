@@ -1,61 +1,58 @@
+use sqlx::Executor;
+use sqlx::{Connection, PgConnection, PgPool};
 use std::net::TcpListener;
 use uuid::Uuid;
-use sqlx::{Connection, PgConnection, PgPool};
-use sqlx::Executor;
 
 use zero2prod::configuration::get_configuration;
 use zero2prod::startup::run;
 
 use zero2prod::configuration::DatabaseSettings;
 
-
 pub struct TestApp {
     pub address: String,
     pub db_pool: PgPool,
-    }
-
+}
 
 async fn spawn_app() -> TestApp {
     let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind random port");
 
     let port = listener.local_addr().unwrap().port();
-    
+
     let address = format!("http://127.0.0.1:{}", port);
-    
 
     let mut configuration = get_configuration().expect("Failed to read configuration.");
     configuration.database.database_name = Uuid::new_v4().to_string();
-let connection_pool = PgPool::connect(&configuration.database.with_db()).await.expect("Failed to connect to Postgres.");
-let server = run(listener, connection_pool.clone())
-.expect("Failed to bind address");
-let _ = tokio::spawn(server);
-TestApp {
-address,
-db_pool: connection_pool,
-}
+    let connection_pool = PgPool::connect(&configuration.database.with_db())
+        .await
+        .expect("Failed to connect to Postgres.");
+    let server = run(listener, connection_pool.clone()).expect("Failed to bind address");
+    let _ = tokio::spawn(server);
+    TestApp {
+        address,
+        db_pool: connection_pool,
+    }
 }
 
 pub async fn configure_database(config: &DatabaseSettings) -> PgPool {
     // Create database
     let mut connection = PgConnection::connect_with(&config.without_db())
-    .await
-    .expect("Failed to connect to Postgres");
+        .await
+        .expect("Failed to connect to Postgres");
 
-    connection.execute(format!(r#"CREATE DATABASE "{}";"#, config.database_name).as_str())
-    .await
-    .expect("Failed to create database.");
+    connection
+        .execute(format!(r#"CREATE DATABASE "{}";"#, config.database_name).as_str())
+        .await
+        .expect("Failed to create database.");
     // Migrate database
     let connection_pool = PgPool::connect(&config.with_db().to_string())
-    .await
-    .expect("Failed to connect to Postgres.");
+        .await
+        .expect("Failed to connect to Postgres.");
     sqlx::migrate!("./migrations")
-    .run(&connection_pool)
-    .await
-    .expect("Failed to migrate the database");
+        .run(&connection_pool)
+        .await
+        .expect("Failed to migrate the database");
     connection_pool
-    }
-    
-
+}
 
 #[tokio::test]
 async fn health_check_works() {
@@ -98,7 +95,7 @@ async fn subscribe_returns_a_200_for_valid_data() {
     assert_eq!(200, response.status().as_u16());
 
     let saved = sqlx::query!("SELECT email, name FROM subscriptions")
-        .fetch_one(& app.db_pool)
+        .fetch_one(&app.db_pool)
         .await
         .expect("Failed to fetch saved subscription.");
 }
@@ -134,25 +131,25 @@ async fn subscribe_returns_a_200_when_fields_are_present_but_empty() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
     let test_cases = vec![
-    ("name=&email=ursula_le_guin%40gmail.com", "empty name"),
-    ("name=Ursula&email=", "empty email"),
-    ("name=Ursula&email=definitely-not-an-email", "invalid email"),
+        ("name=&email=ursula_le_guin%40gmail.com", "empty name"),
+        ("name=Ursula&email=", "empty email"),
+        ("name=Ursula&email=definitely-not-an-email", "invalid email"),
     ];
     for (body, description) in test_cases {
-    // Act
-    let response = client
-    .post(&format!("{}/subscriptions", &app.address))
-    .header("Content-Type", "application/x-www-form-urlencoded")
-    .body(body)
-    .send()
-    .await
-    .expect("Failed to execute request.");
-    // Assert
-    assert_eq!(
-    200,
-    response.status().as_u16(),
-    "The API did not return a 200 OK when the payload was {}.",
-    description
-    );
+        // Act
+        let response = client
+            .post(&format!("{}/subscriptions", &app.address))
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .body(body)
+            .send()
+            .await
+            .expect("Failed to execute request.");
+        // Assert
+        assert_eq!(
+            200,
+            response.status().as_u16(),
+            "The API did not return a 200 OK when the payload was {}.",
+            description
+        );
     }
-    }
+}
