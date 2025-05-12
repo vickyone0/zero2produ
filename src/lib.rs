@@ -2,6 +2,7 @@ pub mod configuration;
 pub mod domain;
 pub mod routes;
 pub mod startup;
+pub mod email_client;
 // use actix_web::{web, App, HttpResponse, HttpServer};
 // use actix_web::dev::Server;
 // use std::net::TcpListener;
