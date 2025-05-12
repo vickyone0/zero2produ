@@ -23,10 +23,10 @@ async fn spawn_app() -> TestApp {
 
     let mut configuration = get_configuration().expect("Failed to read configuration.");
     configuration.database.database_name = Uuid::new_v4().to_string();
-    let connection_pool = PgPool::connect(&configuration.database.with_db())
-        .await
-        .expect("Failed to connect to Postgres.");
-
+    // let connection_pool = PgPool::connect(&configuration.database.with_db())
+    //     .await
+    //     .expect("Failed to connect to Postgres.");
+    let connection_pool = configure_database(&configuration.database).await;
 
     // Build a new email client
 let sender_email = configuration.email_client.sender()
